@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PulsePlay: dashboard visual de músicas e plataformas de streaming." />
+  <meta name="theme-color" content="#0b0a17" />
+  <title>PulsePlay — Dashboard de Música</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0a17;
+      --panel: #121126;
+      --panel-strong: #191633;
+      --line: rgba(255, 255, 255, .09);
+      --text: #f7f4ff;
+      --muted: #9893b7;
+      --pink: #ff5d8f;
+      --pink-soft: rgba(255, 93, 143, .15);
+      --cyan: #63e6e2;
+      --purple: #9d7bff;
+      --yellow: #ffd166;
+      --green: #63e6a6;
+      --shadow: 0 22px 60px rgba(0, 0, 0, .26);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 75% -15%, rgba(157, 123, 255, .21), transparent 35%),
+        radial-gradient(circle at 20% 10%, rgba(255, 93, 143, .10), transparent 28%),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button { font: inherit; }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 236px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      padding: 30px 18px;
+      border-right: 1px solid var(--line);
+      background: rgba(8, 7, 20, .56);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      margin: 0 12px 52px;
+      font-weight: 800;
+      letter-spacing: -.04em;
+      font-size: 1.17rem;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 33px;
+      height: 33px;
+      place-items: center;
+      color: #100b1b;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--pink), var(--yellow));
+      box-shadow: 0 8px 22px rgba(255, 93, 143, .25);
+      font-size: 1.15rem;
+    }
+
+    .nav-label {
+      padding: 0 12px 10px;
+      color: #6f6a8c;
+      font-size: .68rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: grid;
+      gap: 7px;
+    }
+
+    .nav a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      color: var(--muted);
+      border: 1px solid transparent;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: .91rem;
+      transition: .2s ease;
+    }
+
+    .nav a:hover, .nav a.active {
+      color: var(--text);
+      border-color: rgba(255, 93, 143, .2);
+      background: var(--pink-soft);
+    }
+
+    .nav-icon { width: 20px; color: currentColor; text-align: center; font-size: 1.03rem; }
+
+    .sidebar-tip {
+      margin-top: auto;
+      padding: 16px;
+      border: 1px solid rgba(99, 230, 226, .15);
+      border-radius: 16px;
+      background: linear-gradient(150deg, rgba(99, 230, 226, .10), rgba(157, 123, 255, .08));
+    }
+
+    .sidebar-tip strong { display: block; margin-bottom: 7px; font-size: .85rem; }
+    .sidebar-tip p { margin: 0; color: var(--muted); font-size: .76rem; line-height: 1.55; }
+
+    main { width: min(100%, 1450px); padding: 34px clamp(22px, 4vw, 58px) 50px; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 35px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--pink);
+      font-size: .73rem;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 700px; margin-bottom: 13px; font-size: clamp(2rem, 4vw, 3.55rem); line-height: .98; letter-spacing: -.065em; }
+    .intro { max-width: 580px; margin-bottom: 0; color: var(--muted); line-height: 1.6; }
+
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+
+    .period-select, .profile {
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: rgba(255,255,255,.045);
+    }
+
+    .period-select { padding: 10px 13px; outline: 0; cursor: pointer; }
+    .period-select option { color: #171425; }
+
+    .profile { display: flex; align-items: center; gap: 9px; padding: 6px 10px 6px 7px; font-size: .82rem; }
+    .avatar { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 9px; background: linear-gradient(135deg, var(--purple), var(--pink)); font-size: .78rem; font-weight: 800; }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: rgba(18, 17, 38, .78);
+      box-shadow: var(--shadow);
+    }
+
+    .kpi { position: relative; overflow: hidden; padding: 19px; }
+    .kpi::after { position: absolute; right: -24px; bottom: -40px; width: 105px; height: 105px; content: ""; border-radius: 50%; background: var(--accent); opacity: .08; }
+    .kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .kpi-label { color: var(--muted); font-size: .78rem; }
+    .kpi-icon { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 9px; color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
+    .kpi-value { margin-bottom: 8px; font-size: clamp(1.45rem, 2.4vw, 2.05rem); font-weight: 800; letter-spacing: -.05em; }
+    .trend { display: inline-flex; gap: 5px; align-items: center; color: var(--green); font-size: .73rem; font-weight: 700; }
+    .trend.neutral { color: var(--muted); }
+
+    .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(290px, .85fr); gap: 16px; }
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 21px 22px 0; }
+    .card-header h2 { margin-bottom: 5px; font-size: 1rem; letter-spacing: -.02em; }
+    .card-header p { margin-bottom: 0; color: var(--muted); font-size: .77rem; }
+    .chart-wrap { height: 285px; padding: 18px 20px 20px; }
+    .chart-wrap canvas { width: 100% !important; height: 100% !important; }
+    .legend-note { color: var(--muted); font-size: .7rem; }
+
+    .platform-card { min-height: 350px; }
+    .platform-content { display: grid; grid-template-columns: minmax(130px, .95fr) minmax(120px, 1.05fr); align-items: center; gap: 12px; padding: 10px 20px 22px; }
+    .platform-chart { height: 205px; }
+    .platform-chart canvas { width: 100% !important; height: 100% !important; }
+    .platform-list { display: grid; gap: 13px; }
+    .platform-row { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 8px; font-size: .75rem; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .platform-row span:nth-child(2) { color: var(--muted); }
+    .platform-row strong { font-size: .75rem; }
+
+    .wide-card { margin-top: 16px; }
+    .tracks { width: 100%; border-collapse: collapse; }
+    .tracks th { padding: 15px 22px 12px; color: #706b8c; border-bottom: 1px solid var(--line); font-size: .68rem; font-weight: 800; letter-spacing: .11em; text-align: left; text-transform: uppercase; }
+    .tracks td { padding: 15px 22px; border-bottom: 1px solid rgba(255,255,255,.055); color: var(--muted); font-size: .8rem; }
+    .tracks tr:last-child td { border-bottom: 0; }
+    .track-cell { display: flex; align-items: center; gap: 11px; min-width: 210px; }
+    .cover { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 11px; color: #fff; font-size: .98rem; }
+    .cover.one { background: linear-gradient(135deg, #fb7185, #7c3aed); }
+    .cover.two { background: linear-gradient(135deg, #22d3ee, #2563eb); }
+    .cover.three { background: linear-gradient(135deg, #facc15, #f97316); }
+    .cover.four { background: linear-gradient(135deg, #34d399, #0f766e); }
+    .track-name { color: var(--text); font-weight: 700; }
+    .track-artist { margin-top: 2px; color: var(--muted); font-size: .7rem; }
+    .stream-count { color: var(--text); font-weight: 700; }
+    .mini-bar { display: inline-block; width: 82px; height: 5px; margin-right: 7px; overflow: hidden; vertical-align: middle; border-radius: 99px; background: rgba(255,255,255,.08); }
+    .mini-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--pink), var(--purple)); }
+    .badge { padding: 5px 8px; border-radius: 7px; color: var(--green); background: rgba(99, 230, 166, .10); font-size: .68rem; font-weight: 700; }
+
+    .insights { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+    .insight { display: flex; gap: 14px; padding: 19px; }
+    .insight-icon { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 12px; background: var(--pink-soft); color: var(--pink); }
+    .insight:nth-child(2) .insight-icon { color: var(--cyan); background: rgba(99, 230, 226, .10); }
+    .insight h3 { margin-bottom: 5px; font-size: .84rem; }
+    .insight p { margin-bottom: 0; color: var(--muted); font-size: .75rem; line-height: 1.5; }
+
+    .footer { margin-top: 28px; color: #6e6a87; font-size: .71rem; }
+
+    @media (max-width: 1050px) {
+      .app-shell { grid-template-columns: 76px minmax(0, 1fr); }
+      .sidebar { padding: 25px 12px; align-items: center; }
+      .brand { margin: 0 0 48px; }
+      .brand-name, .nav-label, .nav a span:not(.nav-icon), .sidebar-tip { display: none; }
+      .nav a { justify-content: center; width: 48px; height: 48px; padding: 0; }
+      .nav-icon { font-size: 1.12rem; }
+    }
+
+    @media (max-width: 760px) {
+      .app-shell { display: block; }
+      .sidebar { display: none; }
+      main { padding: 24px 16px 36px; }
+      .topbar { align-items: flex-start; margin-bottom: 28px; }
+      .topbar-actions { flex-direction: column; align-items: stretch; }
+      .profile { justify-content: center; }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .dashboard-grid, .insights { grid-template-columns: 1fr; }
+      .chart-wrap { height: 250px; padding-inline: 12px; }
+      .platform-content { grid-template-columns: 1fr 1fr; }
+      .tracks { min-width: 650px; }
+      .wide-card { overflow-x: auto; }
+    }
+
+    @media (max-width: 430px) {
+      h1 { font-size: 2.1rem; }
+      .kpis { gap: 9px; }
+      .kpi { padding: 14px; }
+      .kpi-value { font-size: 1.35rem; }
+      .platform-content { grid-template-columns: 1fr; }
+      .platform-chart { width: 220px; margin: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navegação principal">
+      <div class="brand"><div class="brand-mark">♫</div><span class="brand-name">PulsePlay</span></div>
+      <div class="nav-label">Workspace</div>
+      <nav class="nav">
+        <a class="active" href="#visao-geral"><span class="nav-icon">⌂</span><span>Visão geral</span></a>
+        <a href="#faixas"><span class="nav-icon">♫</span><span>Minhas faixas</span></a>
+        <a href="#plataformas"><span class="nav-icon">◉</span><span>Plataformas</span></a>
+        <a href="#insights"><span class="nav-icon">✦</span><span>Insights</span></a>
+      </nav>
+      <div class="nav-label" style="margin-top: 32px;">Conta</div>
+      <nav class="nav">
+        <a href="#configuracoes"><span class="nav-icon">⚙</span><span>Configurações</span></a>
+      </nav>
+      <div class="sidebar-tip">
+        <strong>Seu som está crescendo</strong>
+        <p>As reproduções subiram 18,6% nesta semana. Continue lançando.</p>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar" id="visao-geral">
+        <div>
+          <p class="eyebrow">Resumo semanal · 07 a 13 de outubro</p>
+          <h1>O som que move sua semana.</h1>
+          <p class="intro">Acompanhe o desempenho das suas músicas em um só lugar e descubra onde seu público está ouvindo.</p>
+        </div>
+        <div class="topbar-actions">
+          <select class="period-select" aria-label="Selecionar período">
+            <option>Últimos 7 dias</option>
+            <option>Últimos 30 dias</option>
+            <option>Este ano</option>
+          </select>
+          <div class="profile"><span class="avatar">AS</span><span>Alex Silva</span></div>
+        </div>
+      </header>
+
+      <section class="kpis" aria-label="Indicadores principais">
+        <article class="card kpi" style="--accent: var(--pink);">
+          <div class="kpi-top"><span class="kpi-label">Reproduções</span><span class="kpi-icon">▶</span></div>
+          <div class="kpi-value">1,28 mi</div><span class="trend">↗ 18,6% <span class="trend neutral">vs. semana anterior</span></span>
+        </article>
+        <article class="card kpi" style="--accent: var(--cyan);">
+          <div class="kpi-top"><span class="kpi-label">Ouvintes únicos</span><span class="kpi-icon">◉</span></div>
+          <div class="kpi-value">78,4 mil</div><span class="trend">↗ 12,4% <span class="trend neutral">vs. semana anterior</span></span>
+        </article>
+        <article class="card kpi" style="--accent: var(--purple);">
+          <div class="kpi-top"><span class="kpi-label">Tempo ouvido</span><span class="kpi-icon">◷</span></div>
+          <div class="kpi-value">42h 18m</div><span class="trend neutral">Média de 32 min por ouvinte</span>
+        </article>
+        <article class="card kpi" style="--accent: var(--yellow);">
+          <div class="kpi-top"><span class="kpi-label">Faixa destaque</span><span class="kpi-icon">★</span></div>
+          <div class="kpi-value">Neon Skies</div><span class="trend">+24,1% <span class="trend neutral">crescimento semanal</span></span>
+        </article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="card">
+          <div class="card-header">
+            <div><h2>Evolução de reproduções</h2><p>Volume diário em todas as plataformas</p></div>
+            <span class="legend-note">● Reproduções</span>
+          </div>
+          <div class="chart-wrap"><canvas id="streamsChart" aria-label="Gráfico de reproduções por dia"></canvas></div>
+        </article>
+
+        <article class="card platform-card" id="plataformas">
+          <div class="card-header"><div><h2>Onde seu público ouve</h2><p>Participação por plataforma</p></div></div>
+          <div class="platform-content">
+            <div class="platform-chart"><canvas id="platformChart" aria-label="Gráfico de plataformas de streaming"></canvas></div>
+            <div class="platform-list">
+              <div class="platform-row"><i class="dot" style="background:#63e6a6"></i><span>Spotify</span><strong>46%</strong></div>
+              <div class="platform-row"><i class="dot" style="background:#ff5d8f"></i><span>YouTube Music</span><strong>24%</strong></div>
+              <div class="platform-row"><i class="dot" style="background:#63e6e2"></i><span>Apple Music</span><strong>18%</strong></div>
+              <div class="platform-row"><i class="dot" style="background:#9d7bff"></i><span>Deezer</span><strong>12%</strong></div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="card wide-card" id="faixas">
+        <div class="card-header"><div><h2>Faixas com melhor desempenho</h2><p>As músicas que mais conectaram com seus ouvintes</p></div><span class="legend-note">Dados fictícios</span></div>
+        <table class="tracks">
+          <thead><tr><th>Faixa</th><th>Reproduções</th><th>Retenção</th><th>Variação</th></tr></thead>
+          <tbody>
+            <tr><td><div class="track-cell"><div class="cover one">♫</div><div><div class="track-name">Neon Skies</div><div class="track-artist">Luna Vale · Single</div></div></div></td><td class="stream-count">184.200</td><td><span class="mini-bar"><i style="width:88%"></i></span> 88%</td><td><span class="badge">↗ 24,1%</span></td></tr>
+            <tr><td><div class="track-cell"><div class="cover two">◒</div><div><div class="track-name">Depois da Chuva</div><div class="track-artist">Luna Vale · Horizonte</div></div></div></td><td class="stream-count">146.580</td><td><span class="mini-bar"><i style="width:76%"></i></span> 76%</td><td><span class="badge">↗ 16,8%</span></td></tr>
+            <tr><td><div class="track-cell"><div class="cover three">✦</div><div><div class="track-name">Cidade em Loop</div><div class="track-artist">Luna Vale · Ao Vivo</div></div></div></td><td class="stream-count">112.940</td><td><span class="mini-bar"><i style="width:69%"></i></span> 69%</td><td><span class="badge">↗ 9,3%</span></td></tr>
+            <tr><td><div class="track-cell"><div class="cover four">♩</div><div><div class="track-name">Sinal Verde</div><div class="track-artist">Luna Vale · Single</div></div></div></td><td class="stream-count">98.410</td><td><span class="mini-bar"><i style="width:64%"></i></span> 64%</td><td><span class="badge">↗ 7,6%</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="insights" id="insights">
+        <article class="card insight"><div class="insight-icon">✦</div><div><h3>Melhor horário para lançar</h3><p>Seu público mais engajado aparece às <strong>18h</strong>, principalmente de quinta a domingo.</p></div></article>
+        <article class="card insight"><div class="insight-icon">◉</div><div><h3>Ouvintes em alta</h3><p>O alcance em <strong>São Paulo</strong> cresceu 31% e já representa 22% dos novos ouvintes.</p></div></article>
+      </section>
+
+      <p class="footer">PulsePlay · Painel demonstrativo para fins didáticos · Números fictícios</p>
+    </main>
+  </div>
+
+  <script>
+    const dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    const reproducoes = [12400, 15800, 13900, 18600, 22100, 27400, 31100];
+    const gridColor = 'rgba(255, 255, 255, .07)';
+
+    Chart.defaults.color = '#9893b7';
+    Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui, sans-serif';
+
+    new Chart(document.getElementById('streamsChart'), {
+      type: 'line',
+      data: {
+        labels: dias,
+        datasets: [{
+          label: 'Reproduções',
+          data: reproducoes,
+          borderColor: '#ff5d8f',
+          backgroundColor: (context) => {
+            const chart = context.chart;
+            const { ctx, chartArea } = chart;
+            if (!chartArea) return 'rgba(255, 93, 143, .12)';
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            gradient.addColorStop(0, 'rgba(255, 93, 143, .30)');
+            gradient.addColorStop(1, 'rgba(255, 93, 143, 0)');
+            return gradient;
+          },
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#ff5d8f',
+          pointBorderColor: '#121126',
+          pointBorderWidth: 2,
+          fill: true,
+          tension: .42
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            displayColors: false,
+            backgroundColor: '#191633',
+            padding: 11,
+            callbacks: { label: (item) => ' ' + item.raw.toLocaleString('pt-BR') + ' reproduções' }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, border: { display: false } },
+          y: { beginAtZero: true, grid: { color: gridColor }, border: { display: false }, ticks: { callback: value => (value / 1000) + 'k', maxTicksLimit: 5 } }
+        }
+      }
+    });
+
+    new Chart(document.getElementById('platformChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Spotify', 'YouTube Music', 'Apple Music', 'Deezer'],
+        datasets: [{ data: [46, 24, 18, 12], backgroundColor: ['#63e6a6', '#ff5d8f', '#63e6e2', '#9d7bff'], borderWidth: 0, hoverOffset: 7 }]
+      },
+      options: {
+        cutout: '73%',
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { displayColors: false, backgroundColor: '#191633', padding: 10, callbacks: { label: (item) => ' ' + item.label + ': ' + item.raw + '%' } }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
